@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tegaki Studio - リアルタイム手書き文字判別アプリ</title>
+    <meta name="description" content="ブラウザ上で手書きした文字をリアルタイムに高精度で判別し、テキストを作成できるプレミアムなWebアプリケーションです。日本語の手書き入力に対応しています。">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <div class="logo-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </div>
+                <div class="logo-text">
+                    <h1>Tegaki <span>Studio</span></h1>
+                    <p class="tagline">リアルタイム日本語手書き判別</p>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <!-- Theme Toggle -->
+                <button id="theme-toggle-btn" class="icon-btn" aria-label="テーマ切り替え" title="テーマ切り替え">
+                    <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                    <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                </button>
+
+                <!-- Help Button -->
+                <button id="help-btn" class="icon-btn" aria-label="ヘルプ" title="使い方ガイド">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- App Tabs -->
+        <div class="app-tabs">
+            <button class="tab-btn active" id="tab-editor" data-tab="editor-view">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                <span>手書きエディタ</span>
+            </button>
+            <button class="tab-btn" id="tab-quiz" data-tab="quiz-view">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+                <span>漢字テスト</span>
+            </button>
+        </div>
+
+        <!-- Main Content -->
+        <main id="editor-view" class="main-layout">
+            <!-- Left Panel: Handwriting Canvases (Two Canvases) -->
+            <section class="canvas-section card">
+                <div class="panel-header">
+                    <h2><span class="indicator active"></span>マルチ描画キャンバス</h2>
+                </div>
+
+                <div class="canvases-grid">
+                    <!-- Canvas Box 1 -->
+                    <div class="canvas-box">
+                        <div class="canvas-box-header">
+                            <span class="canvas-label">キャンバス 1</span>
+                            <span class="mode-badge" id="canvas-status-1">待機中</span>
+                        </div>
+                        <!-- Canvas Wrapper -->
+                        <div class="canvas-wrapper" id="canvas-container-1">
+                            <canvas id="drawing-canvas-1"></canvas>
+                            <!-- Floating Brush Controller -->
+                            <div class="canvas-toolbar">
+                                <button id="undo-btn-1" class="tool-btn" disabled title="元に戻す (Ctrl+Z)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                                </button>
+                                <button id="redo-btn-1" class="tool-btn" disabled title="やり直す (Ctrl+Y)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+                                </button>
+                                <div class="divider"></div>
+                                <button id="pen-size-btn-1" class="tool-btn dropdown-trigger" title="ペンの太さ" data-size="4">
+                                    <span class="pen-dot size-medium"></span>
+                                </button>
+                                <div class="size-dropdown shadow-lg hidden" id="size-dropdown-1">
+                                    <button data-size="2" class="size-option"><span class="pen-dot size-thin"></span>細い (2px)</button>
+                                    <button data-size="4" class="size-option active"><span class="pen-dot size-medium"></span>普通 (4px)</button>
+                                    <button data-size="8" class="size-option"><span class="pen-dot size-thick"></span>太い (8px)</button>
+                                </div>
+                                <div class="divider"></div>
+                                <button id="clear-canvas-btn-1" class="tool-btn danger" title="キャンバスをクリア">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Recognition Candidates -->
+                        <div class="candidates-container">
+                            <div class="candidates-label">候補 1:</div>
+                            <div class="candidates-wrapper" id="candidates-box-1">
+                                <span class="no-data-text">文字を書いてください</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Box 2 -->
+                    <div class="canvas-box">
+                        <div class="canvas-box-header">
+                            <span class="canvas-label">キャンバス 2</span>
+                            <span class="mode-badge" id="canvas-status-2">待機中</span>
+                        </div>
+                        <!-- Canvas Wrapper -->
+                        <div class="canvas-wrapper" id="canvas-container-2">
+                            <canvas id="drawing-canvas-2"></canvas>
+                            <!-- Floating Brush Controller -->
+                            <div class="canvas-toolbar">
+                                <button id="undo-btn-2" class="tool-btn" disabled title="元に戻す">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                                </button>
+                                <button id="redo-btn-2" class="tool-btn" disabled title="やり直す">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+                                </button>
+                                <div class="divider"></div>
+                                <button id="pen-size-btn-2" class="tool-btn dropdown-trigger" title="ペンの太さ" data-size="4">
+                                    <span class="pen-dot size-medium"></span>
+                                </button>
+                                <div class="size-dropdown shadow-lg hidden" id="size-dropdown-2">
+                                    <button data-size="2" class="size-option"><span class="pen-dot size-thin"></span>細い (2px)</button>
+                                    <button data-size="4" class="size-option active"><span class="pen-dot size-medium"></span>普通 (4px)</button>
+                                    <button data-size="8" class="size-option"><span class="pen-dot size-thick"></span>太い (8px)</button>
+                                </div>
+                                <div class="divider"></div>
+                                <button id="clear-canvas-btn-2" class="tool-btn danger" title="キャンバスをクリア">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Recognition Candidates -->
+                        <div class="candidates-container">
+                            <div class="candidates-label">候補 2:</div>
+                            <div class="candidates-wrapper" id="candidates-box-2">
+                                <span class="no-data-text">文字を書いてください</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Editor / Composition -->
+            <section class="editor-section card">
+                <div class="panel-header">
+                    <h2>テキストエディタ</h2>
+                    <div class="editor-status">
+                        <span id="char-counter">0 文字</span>
+                    </div>
+                </div>
+
+                <!-- Text Area Panel -->
+                <div class="editor-wrapper">
+                    <textarea id="composition-text" placeholder="ここに文字が追加されます。キーボード入力や編集も可能です..." spellcheck="false"></textarea>
+                    
+                    <!-- Text Control Bar -->
+                    <div class="editor-actions">
+                        <!-- Space -->
+                        <button id="space-btn" class="action-btn secondary" title="スペースを入力">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/></svg>
+                            <span>スペース</span>
+                        </button>
+                        <!-- Backspace -->
+                        <button id="backspace-btn" class="action-btn secondary" title="一文字削除">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                            <span>バックスペース</span>
+                        </button>
+                        <!-- Read Aloud -->
+                        <button id="speak-btn" class="action-btn" title="テキストを読み上げる">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                            <span>読み上げ</span>
+                        </button>
+                        <!-- Copy -->
+                        <button id="copy-btn" class="action-btn primary" title="クリップボードにコピー">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                            <span>コピー</span>
+                        </button>
+                        <!-- Clear Text -->
+                        <button id="clear-text-btn" class="action-btn danger" title="テキストをクリア">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+                            <span>クリア</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- History / Utility Card -->
+                <div class="history-container">
+                    <div class="history-header">
+                        <h3>履歴と保存</h3>
+                        <button id="save-history-btn" class="text-link-btn" title="現在の文章を履歴に保存">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            保存する
+                        </button>
+                    </div>
+                    <div class="history-list" id="history-items">
+                        <span class="no-history-text">保存された履歴はありません</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Quiz View -->
+        <main id="quiz-view" class="main-layout hidden">
+            <!-- Left Panel: Handwriting Canvases (Three Canvases for 3 Chars) -->
+            <section class="canvas-section card">
+                <div class="panel-header">
+                    <h2><span class="indicator active"></span>漢字テスト解答エリア</h2>
+                    <div class="quiz-question-container">
+                        <span id="quiz-question-num" class="mode-badge">第 1 問</span>
+                    </div>
+                </div>
+
+                <!-- Active Question text -->
+                <div class="question-displaycard" id="question-text-card">
+                    問題が読み込まれていません。「テストを開始」を押してください。
+                </div>
+
+                <!-- Three Canvases Grid -->
+                <div class="canvases-grid quiz-canvases-grid">
+                    <!-- Canvas Box 1 -->
+                    <div class="canvas-box">
+                        <div class="canvas-box-header">
+                            <span class="canvas-label">1 文字目</span>
+                            <span class="mode-badge" id="canvas-status-quiz-1">待機中</span>
+                        </div>
+                        <div class="canvas-wrapper" id="canvas-container-quiz-1">
+                            <canvas id="drawing-canvas-quiz-1"></canvas>
+                            <div class="canvas-toolbar">
+                                <button id="undo-btn-quiz-1" class="tool-btn" disabled title="元に戻す">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                                </button>
+                                <button id="redo-btn-quiz-1" class="tool-btn" disabled title="やり直す">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+                                </button>
+                                <div class="divider"></div>
+                                <button id="pen-size-btn-quiz-1" class="tool-btn dropdown-trigger" title="ペンの太さ" data-size="4">
+                                    <span class="pen-dot size-medium"></span>
+                                </button>
+                                <div class="size-dropdown shadow-lg hidden" id="size-dropdown-quiz-1">
+                                    <button data-size="2" class="size-option"><span class="pen-dot size-thin"></span>細い</button>
+                                    <button data-size="4" class="size-option active"><span class="pen-dot size-medium"></span>普通</button>
+                                    <button data-size="8" class="size-option"><span class="pen-dot size-thick"></span>太い</button>
+                                </div>
+                                <div class="divider"></div>
+                                <button id="clear-canvas-btn-quiz-1" class="tool-btn danger" title="クリア">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="candidates-container compact">
+                            <div class="candidates-wrapper" id="candidates-box-quiz-1">
+                                <span class="no-data-text">文字を描いてください</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Box 2 -->
+                    <div class="canvas-box">
+                        <div class="canvas-box-header">
+                            <span class="canvas-label">2 文字目</span>
+                            <span class="mode-badge" id="canvas-status-quiz-2">待機中</span>
+                        </div>
+                        <div class="canvas-wrapper" id="canvas-container-quiz-2">
+                            <canvas id="drawing-canvas-quiz-2"></canvas>
+                            <div class="canvas-toolbar">
+                                <button id="undo-btn-quiz-2" class="tool-btn" disabled title="元に戻す">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                                </button>
+                                <button id="redo-btn-quiz-2" class="tool-btn" disabled title="やり直す">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+                                </button>
+                                <div class="divider"></div>
+                                <button id="pen-size-btn-quiz-2" class="tool-btn dropdown-trigger" title="ペンの太さ" data-size="4">
+                                    <span class="pen-dot size-medium"></span>
+                                </button>
+                                <div class="size-dropdown shadow-lg hidden" id="size-dropdown-quiz-2">
+                                    <button data-size="2" class="size-option"><span class="pen-dot size-thin"></span>細い</button>
+                                    <button data-size="4" class="size-option active"><span class="pen-dot size-medium"></span>普通</button>
+                                    <button data-size="8" class="size-option"><span class="pen-dot size-thick"></span>太い</button>
+                                </div>
+                                <div class="divider"></div>
+                                <button id="clear-canvas-btn-quiz-2" class="tool-btn danger" title="クリア">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="candidates-container compact">
+                            <div class="candidates-wrapper" id="candidates-box-quiz-2">
+                                <span class="no-data-text">文字を描いてください</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Box 3 -->
+                    <div class="canvas-box">
+                        <div class="canvas-box-header">
+                            <span class="canvas-label">3 文字目</span>
+                            <span class="mode-badge" id="canvas-status-quiz-3">待機中</span>
+                        </div>
+                        <div class="canvas-wrapper" id="canvas-container-quiz-3">
+                            <canvas id="drawing-canvas-quiz-3"></canvas>
+                            <div class="canvas-toolbar">
+                                <button id="undo-btn-quiz-3" class="tool-btn" disabled title="元に戻す">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                                </button>
+                                <button id="redo-btn-quiz-3" class="tool-btn" disabled title="やり直す">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+                                </button>
+                                <div class="divider"></div>
+                                <button id="pen-size-btn-quiz-3" class="tool-btn dropdown-trigger" title="ペンの太さ" data-size="4">
+                                    <span class="pen-dot size-medium"></span>
+                                </button>
+                                <div class="size-dropdown shadow-lg hidden" id="size-dropdown-quiz-3">
+                                    <button data-size="2" class="size-option"><span class="pen-dot size-thin"></span>細い</button>
+                                    <button data-size="4" class="size-option active"><span class="pen-dot size-medium"></span>普通</button>
+                                    <button data-size="8" class="size-option"><span class="pen-dot size-thick"></span>太い</button>
+                                </div>
+                                <div class="divider"></div>
+                                <button id="clear-canvas-btn-quiz-3" class="tool-btn danger" title="クリア">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="candidates-container compact">
+                            <div class="candidates-wrapper" id="candidates-box-quiz-3">
+                                <span class="no-data-text">文字を描いてください</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Answer Slots display & Answer Decision Button -->
+                <div class="quiz-answer-area">
+                    <div class="answer-slots-label">あなたの解答:</div>
+                    <div class="answer-slots-wrapper">
+                        <div class="answer-slot" id="answer-slot-1"></div>
+                        <div class="answer-slot" id="answer-slot-2"></div>
+                        <div class="answer-slot" id="answer-slot-3"></div>
+                    </div>
+                    <button id="submit-answer-btn" class="action-btn primary large-action-btn" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span>解答を決定する</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Right Panel: Quiz Status / Result / Creation -->
+            <section class="editor-section card">
+                <!-- Test Running Status panel -->
+                <div id="quiz-running-panel" class="quiz-sidebar-panel hidden">
+                    <div class="panel-header">
+                        <h2>テスト進行状況</h2>
+                    </div>
+                    <div class="quiz-progress-box">
+                        <div class="quiz-stats-row">
+                            <span>進捗:</span>
+                            <strong id="quiz-progress-text">0 / 0</strong>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" id="quiz-progress-bar" style="width: 0%"></div>
+                        </div>
+                        <div class="quiz-stats-row mt-4">
+                            <span>正解率:</span>
+                            <strong id="quiz-score-text">0% (0/0)</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="feedback-card" id="quiz-feedback-box">
+                        <div class="feedback-icon" id="feedback-icon-container"></div>
+                        <div class="feedback-text" id="feedback-text-container">決定ボタンを押して解答してください</div>
+                    </div>
+
+                    <button id="stop-quiz-btn" class="action-btn danger w-full justify-center">
+                        <span>テストを中断する</span>
+                    </button>
+                </div>
+
+                <!-- Test Management (Creation & Starting) Panel -->
+                <div id="quiz-manage-panel" class="quiz-sidebar-panel">
+                    <div class="panel-header">
+                        <h2>漢字テスト設定</h2>
+                        <button id="start-quiz-btn" class="action-btn primary">
+                            <span>テストを開始</span>
+                        </button>
+                    </div>
+
+                    <!-- New Question Creator Form -->
+                    <div class="quiz-creator-box">
+                        <h3>➕ 新規問題の作成</h3>
+                        <div class="creator-form">
+                            <div class="form-group">
+                                <label for="new-question-text">問題文 (例: [しんかんせん] に乗る。)</label>
+                                <input type="text" id="new-question-text" placeholder="答えの読み仮名を[ ]で囲んでください" />
+                            </div>
+                            <div class="form-group">
+                                <label for="new-question-answer">答え (漢字 3 文字)</label>
+                                <input type="text" id="new-question-answer" maxlength="3" placeholder="例: 新幹線" />
+                            </div>
+                            <button id="add-question-btn" class="action-btn secondary w-full justify-center">
+                                <span>問題を追加する</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Question List Manager -->
+                    <div class="history-container">
+                        <div class="history-header">
+                            <h3>登録済みの問題一覧 (<span id="total-questions-num">0</span>)</h3>
+                        </div>
+                        <div class="history-list" id="quiz-questions-list">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal-overlay hidden" id="help-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Tegaki Studio の使い方</h2>
+                <button id="close-modal-btn" class="icon-btn close-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ol class="help-steps">
+                    <li>
+                        <div class="step-num">1</div>
+                        <div class="step-desc">
+                            <strong>文字を描画する:</strong><br>
+                            左側の「描画キャンバス」にマウスやタッチ操作で自由に文字を描きます。
+                        </div>
+                    </li>
+                    <li>
+                        <div class="step-num">2</div>
+                        <div class="step-desc">
+                            <strong>候補を選択する:</strong><br>
+                            文字を描くと下に「認識候補」がリアルタイムに表示されます。入力したい文字をクリックすると右側のエディタに追加されます。
+                        </div>
+                    </li>
+                    <li>
+                        <div class="step-num">3</div>
+                        <div class="step-desc">
+                            <strong>文章の活用:</strong><br>
+                            「コピー」でクリップボードに保存、「読み上げ」で音声合成機能（日本語）による読み上げが行えます。
+                        </div>
+                    </li>
+                </ol>
+                <div class="help-tips">
+                    <h3>💡 便利なヒント:</h3>
+                    <ul>
+                        <li>キャンバスのツールバーから「元に戻す（Undo）」や「ペンの太さ」の変更ができます。</li>
+                        <li>文字候補をタップするとキャンバスは自動的にクリアされ、すぐに次の文字を書き始められます！</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn primary" id="dismiss-help-btn">了解しました</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Script File -->
+    <script src="app.js"></script>
+</body>
+</html>
