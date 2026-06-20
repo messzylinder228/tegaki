@@ -1248,10 +1248,18 @@ body.light-theme .tab-btn:hover {
     box-shadow: var(--grad-glow);
 }
 
-/* Quiz canvases grid (3 columns) */
+/* Quiz canvases grid (2x2 Layout) */
 .quiz-canvases-grid {
-    grid-template-columns: 1fr 1fr 1fr;
-    min-height: 340px;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: auto auto;
+    gap: 16px;
+    min-height: auto;
+}
+
+.quiz-canvases-grid .canvas-wrapper {
+    min-height: auto !important;
+    aspect-ratio: 1 / 1 !important;
 }
 
 @media (max-width: 340px) {
@@ -1542,7 +1550,93 @@ body.light-theme .progress-bar-container {
 /* Hide suggestions only in quiz mode */
 .quiz-canvases-grid .candidates-container {
     display: none !important;
+}/* Grade Selection View Styles */
+.grade-card-section {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    align-items: center;
+    width: 100%;
 }
 
+.grade-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    width: 100%;
+    margin-top: 16px;
+}
 
+.grade-card {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--box-shadow-sm);
+}
 
+.grade-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--color-primary);
+    box-shadow: 0 12px 30px rgba(var(--color-primary-rgb), 0.2);
+    background: rgba(var(--color-primary-rgb), 0.04);
+}
+
+.grade-number {
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 800;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--grad-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--grad-glow);
+}
+
+.grade-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.grade-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* Text Center Helper */
+.text-center {
+    justify-content: center !important;
+}
+
+/* Mobile responsive for grade grid */
+@media (max-width: 992px) {
+    .grade-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+}
+
+@media (max-width: 576px) {
+    .grade-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .grade-card {
+        padding: 24px 16px;
+        gap: 12px;
+    }
+}

@@ -451,24 +451,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModalBtn = document.getElementById('close-modal-btn');
     const dismissHelpBtn = document.getElementById('dismiss-help-btn');
     
-    // Text Editor & Actions (Editor View)
-    const editor = document.getElementById('composition-text');
-    const charCounter = document.getElementById('char-counter');
-    const spaceBtn = document.getElementById('space-btn');
-    const backspaceBtn = document.getElementById('backspace-btn');
-    const speakBtn = document.getElementById('speak-btn');
-    const copyBtn = document.getElementById('copy-btn');
-    const clearTextBtn = document.getElementById('clear-text-btn');
-    const saveHistoryBtn = document.getElementById('save-history-btn');
-    const historyItemsContainer = document.getElementById('history-items');
-    
     // Toasts
     const toastContainer = document.getElementById('toast-container');
     
-    // App Tab Buttons & View Containers
-    const tabEditor = document.getElementById('tab-editor');
-    const tabQuiz = document.getElementById('tab-quiz');
-    const editorView = document.getElementById('editor-view');
+    // View Containers
+    const gradeSelectionView = document.getElementById('grade-selection-view');
     const quizView = document.getElementById('quiz-view');
     
     // Globals for Handlers
@@ -476,43 +463,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(message, type);
     };
 
-    // --- Instantiate Multi Drawing Canvases (Editor Tab) ---
     let activeCanvas = null; // Tracks last-focused canvas for keyboard shortcuts
 
-    const canvas1 = new HandwritingCanvas({
-        containerId: 'canvas-container-1',
-        canvasId: 'drawing-canvas-1',
-        statusId: 'canvas-status-1',
-        candidatesBoxId: 'candidates-box-1',
-        undoBtnId: 'undo-btn-1',
-        redoBtnId: 'redo-btn-1',
-        clearBtnId: 'clear-canvas-btn-1',
-        penSizeBtnId: 'pen-size-btn-1',
-        sizeDropdownId: 'size-dropdown-1',
-        activeTheme: activeTheme,
-        onTextInserted: (char) => insertText(char),
-        onFocused: () => { activeCanvas = canvas1; }
-    });
-
-    const canvas2 = new HandwritingCanvas({
-        containerId: 'canvas-container-2',
-        canvasId: 'drawing-canvas-2',
-        statusId: 'canvas-status-2',
-        candidatesBoxId: 'candidates-box-2',
-        undoBtnId: 'undo-btn-2',
-        redoBtnId: 'redo-btn-2',
-        clearBtnId: 'clear-canvas-btn-2',
-        penSizeBtnId: 'pen-size-btn-2',
-        sizeDropdownId: 'size-dropdown-2',
-        activeTheme: activeTheme,
-        onTextInserted: (char) => insertText(char),
-        onFocused: () => { activeCanvas = canvas2; }
-    });
-
-    activeCanvas = canvas1; // Default active
-
-    // --- Instantiate Handwriting Canvases (Quiz Tab) ---
-    // Background evaluation: On stroke change, update the visual slot indicators
+    // --- Instantiate Handwriting Canvases (Quiz View) ---
     const quizCanvas1 = new HandwritingCanvas({
         containerId: 'canvas-container-quiz-1',
         canvasId: 'drawing-canvas-quiz-1',
@@ -558,49 +511,34 @@ document.addEventListener('DOMContentLoaded', () => {
         onFocused: () => { activeCanvas = quizCanvas3; }
     });
 
+    const quizCanvas4 = new HandwritingCanvas({
+        containerId: 'canvas-container-quiz-4',
+        canvasId: 'drawing-canvas-quiz-4',
+        statusId: 'canvas-status-quiz-4',
+        candidatesBoxId: 'candidates-box-quiz-4',
+        undoBtnId: 'undo-btn-quiz-4',
+        redoBtnId: 'redo-btn-quiz-4',
+        clearBtnId: 'clear-canvas-btn-quiz-4',
+        penSizeBtnId: 'pen-size-btn-quiz-4',
+        sizeDropdownId: 'size-dropdown-quiz-4',
+        activeTheme: activeTheme,
+        onStrokeChanged: (hasStroke) => updateQuizAnswerSlot(3, hasStroke),
+        onFocused: () => { activeCanvas = quizCanvas4; }
+    });
+
+    activeCanvas = quizCanvas1; // Default active
+
     // Window Resize event
     let resizeTimer;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-            canvas1.initCanvas();
-            canvas2.initCanvas();
             quizCanvas1.initCanvas();
             quizCanvas2.initCanvas();
             quizCanvas3.initCanvas();
+            quizCanvas4.initCanvas();
         }, 150);
     });
-
-    // Tab Switching controller
-    function switchTab(targetTab) {
-        if (targetTab === 'editor-view') {
-            tabQuiz.classList.remove('active');
-            tabEditor.classList.add('active');
-            quizView.classList.add('hidden');
-            editorView.classList.remove('hidden');
-            
-            setTimeout(() => {
-                canvas1.initCanvas();
-                canvas2.initCanvas();
-            }, 100);
-            activeCanvas = canvas1;
-        } else if (targetTab === 'quiz-view') {
-            tabEditor.classList.remove('active');
-            tabQuiz.classList.add('active');
-            editorView.classList.add('hidden');
-            quizView.classList.remove('hidden');
-            
-            setTimeout(() => {
-                quizCanvas1.initCanvas();
-                quizCanvas2.initCanvas();
-                quizCanvas3.initCanvas();
-            }, 100);
-            activeCanvas = quizCanvas1;
-        }
-    }
-
-    tabEditor.addEventListener('click', () => switchTab('editor-view'));
-    tabQuiz.addEventListener('click', () => switchTab('quiz-view'));
 
     // Keyboard shortcuts for Undo/Redo (Applies to activeCanvas)
     window.addEventListener('keydown', (e) => {
@@ -618,15 +556,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===       KANJI QUIZ GAME SYSTEM      ===
     // ==========================================
 
-    const QUIZ_STORAGE_KEY = 'tegaki_studio_quiz_questions';
     let quizQuestions = [];
     let currentQuizIndex = 0;
     let quizScore = 0;
-    let quizAnswers = ['', '', '']; // Store 'filled' or '' representing stroke status
+    let quizAnswers = ['', '', '', '']; // Store stroke status for up to 4 canvases
     let isQuizActive = false;
 
     // elements
-    const quizManagePanel = document.getElementById('quiz-manage-panel');
     const quizRunningPanel = document.getElementById('quiz-running-panel');
     const qnumBadge = document.getElementById('quiz-question-num');
     const qtextCard = document.getElementById('question-text-card');
@@ -638,115 +574,76 @@ document.addEventListener('DOMContentLoaded', () => {
     const feedbackIcon = document.getElementById('feedback-icon-container');
     const feedbackText = document.getElementById('feedback-text-container');
     
-    const startQuizBtn = document.getElementById('start-quiz-btn');
     const stopQuizBtn = document.getElementById('stop-quiz-btn');
-    const addQuestionBtn = document.getElementById('add-question-btn');
-    const newQuestionText = document.getElementById('new-question-text');
-    const newQuestionAnswer = document.getElementById('new-question-answer');
-    const totalQuestionsNum = document.getElementById('total-questions-num');
-    const quizQuestionsList = document.getElementById('quiz-questions-list');
 
     const answerSlots = [
         document.getElementById('answer-slot-1'),
         document.getElementById('answer-slot-2'),
-        document.getElementById('answer-slot-3')
+        document.getElementById('answer-slot-3'),
+        document.getElementById('answer-slot-4')
     ];
 
-    // Default questions
-    const DEFAULT_QUESTIONS = [
-        { text: '放課後に [としょしつ] で勉強する。', answer: '図書室' },
-        { text: '爽やかな [しんかんせん] に乗る。', answer: '新幹線' },
-        { text: '新しい [じどうしゃ] を運転する。', answer: '自動車' },
-        { text: '日本の [かんじけん] 定を受ける。', answer: '漢字検' }
+    const canvasBoxes = [
+        document.getElementById('quiz-canvas-box-1'),
+        document.getElementById('quiz-canvas-box-2'),
+        document.getElementById('quiz-canvas-box-3'),
+        document.getElementById('quiz-canvas-box-4')
     ];
 
-    function initQuizData() {
-        const stored = localStorage.getItem(QUIZ_STORAGE_KEY);
-        if (stored) {
-            quizQuestions = JSON.parse(stored);
-        } else {
-            quizQuestions = [...DEFAULT_QUESTIONS];
-            localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(quizQuestions));
-        }
-        updateQuizSettingsUI();
-    }
+    // Default categorized questions by Grade (小学1〜6年生)
+    const ALL_GRADE_QUESTIONS = {
+        1: [
+            { text: "教室に [はいる]。", answer: "入る" },
+            { text: "校門を [でる]。", answer: "出る" },
+            { text: "黒板を [みる]。", answer: "見る" },
+            { text: "背筋を [のばして] 立つ。", answer: "伸ばして" },
+            { text: "外に [でていく]。", answer: "出て行く" }
+        ],
+        2: [
+            { text: "運動場を [はしる]。", answer: "走る" },
+            { text: "友達と [はなしあう]。", answer: "話し合う" },
+            { text: "切手を [はる]。", answer: "貼る" },
+            { text: "桜の花が [ちる]。", answer: "散る" },
+            { text: "算数の問題を [とく]。", answer: "解く" }
+        ],
+        3: [
+            { text: "本を [よみかえす]。", answer: "読み返す" },
+            { text: "お小遣いを [つかいきる]。", answer: "使い切る" },
+            { text: "宿題を [おえる]。", answer: "終える" },
+            { text: "山を [のぼりきる]。", answer: "登り切る" },
+            { text: "服を [きかえる]。", answer: "着替える" }
+        ],
+        4: [
+            { text: "歌を [うたいだす]。", answer: "歌い出す" },
+            { text: "絵を [かきなおす]。", answer: "書き直す" },
+            { text: "鳥が空を [とぶ]。", answer: "飛ぶ" },
+            { text: "川を [およぎわたる]。", answer: "泳ぎ渡る" },
+            { text: "約束を [まもる]。", answer: "守る" }
+        ],
+        5: [
+            { text: "新しい家を [たてる]。", answer: "建てる" },
+            { text: "意見を [のべる]。", answer: "述べる" },
+            { text: "事件を [ふせぐ]。", answer: "防ぐ" },
+            { text: "危険を [さける]。", answer: "避ける" },
+            { text: "テープを [はる]。", answer: "張る" }
+        ],
+        6: [
+            { text: "下を [みおろす]。", answer: "見下ろす" },
+            { text: "引き出しから [ひきだす]。", answer: "引き出す" },
+            { text: "プールに [とびこむ]。", answer: "飛び込む" },
+            { text: "友達と [はなしあう]。", answer: "話し合う" },
+            { text: "活動を [うちきる]。", answer: "打ち切る" }
+        ]
+    };
 
-    function updateQuizSettingsUI() {
-        totalQuestionsNum.textContent = quizQuestions.length;
-        renderQuestionsList();
-    }
-
-    function renderQuestionsList() {
-        quizQuestionsList.innerHTML = '';
-        if (quizQuestions.length === 0) {
-            quizQuestionsList.innerHTML = '<span class="no-history-text">登録された問題はありません。</span>';
-            return;
-        }
-
-        quizQuestions.forEach((q, idx) => {
-            const div = document.createElement('div');
-            div.className = 'history-item';
-
-            const textSpan = document.createElement('span');
-            textSpan.className = 'history-text';
-            textSpan.innerHTML = `${idx + 1}. ${escapeHTML(q.text)} <strong>(${escapeHTML(q.answer)})</strong>`;
-
-            const actionDiv = document.createElement('div');
-            actionDiv.className = 'quiz-item-action';
-
-            const delBtn = document.createElement('button');
-            delBtn.className = 'history-item-btn delete-btn';
-            delBtn.title = '問題を削除';
-            delBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>';
-            delBtn.addEventListener('click', () => {
-                deleteQuestion(idx);
-            });
-
-            actionDiv.appendChild(delBtn);
-            div.appendChild(textSpan);
-            div.appendChild(actionDiv);
-            quizQuestionsList.appendChild(div);
+    // Set up click listeners for grade cards
+    const gradeCards = document.querySelectorAll('.grade-card');
+    gradeCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const grade = parseInt(card.getAttribute('data-grade'), 10);
+            startQuiz(grade);
         });
-    }
-
-    function addQuestion() {
-        const text = newQuestionText.value.trim();
-        const answer = newQuestionAnswer.value.trim();
-
-        if (!text || !answer) {
-            showToast('問題文と答えの両方を入力してください。', 'danger');
-            return;
-        }
-
-        // Bracket check inside question text
-        if (!text.includes('[') || !text.includes(']')) {
-            showToast('問題文にはよみがなを [ ] で囲んで含めてください。 (例: [しんかんせん] に乗る)', 'danger');
-            return;
-        }
-
-        if (answer.length !== 3) {
-            showToast('答えは正確に「3文字」で入力してください。', 'danger');
-            return;
-        }
-
-        quizQuestions.push({ text, answer });
-        localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(quizQuestions));
-        updateQuizSettingsUI();
-
-        // Clear forms
-        newQuestionText.value = '';
-        newQuestionAnswer.value = '';
-        showToast('問題を追加しました！', 'success');
-    }
-
-    function deleteQuestion(idx) {
-        if (confirm('この問題を削除しますか？')) {
-            quizQuestions.splice(idx, 1);
-            localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(quizQuestions));
-            updateQuizSettingsUI();
-            showToast('問題を削除しました。');
-        }
-    }
+    });
 
     // Update quiz slot display based on whether user has written stroke
     function updateQuizAnswerSlot(slotIdx, hasStroke) {
@@ -762,27 +659,40 @@ document.addEventListener('DOMContentLoaded', () => {
             answerSlots[slotIdx].classList.remove('filled');
         }
 
-        // Enable submit button only if all 3 slots have strokes
-        const allFilled = quizAnswers.every(c => c !== '');
+        // Enable submit button only if all active slots have strokes
+        const q = quizQuestions[currentQuizIndex];
+        const answerLength = q.answer.length;
+        
+        let allFilled = true;
+        for (let i = 0; i < answerLength; i++) {
+            if (quizAnswers[i] !== 'filled') {
+                allFilled = false;
+                break;
+            }
+        }
         submitAnswerBtn.disabled = !allFilled;
     }
 
-    function startQuiz() {
-        if (quizQuestions.length === 0) {
-            showToast('テストを開始するには、問題を設定から追加してください。', 'danger');
-            return;
-        }
-
+    function startQuiz(grade) {
         isQuizActive = true;
         currentQuizIndex = 0;
         quizScore = 0;
 
-        quizManagePanel.classList.add('hidden');
-        quizRunningPanel.classList.remove('hidden');
+        quizQuestions = ALL_GRADE_QUESTIONS[grade] || [];
+        if (quizQuestions.length === 0) {
+            showToast('テストを開始できませんでした。', 'danger');
+            return;
+        }
+
+        // Shuffle questions
+        quizQuestions = [...quizQuestions].sort(() => Math.random() - 0.5);
+
+        gradeSelectionView.classList.add('hidden');
+        quizView.classList.remove('hidden');
 
         // Load first question
         loadQuizQuestion(currentQuizIndex);
-        showToast('漢字テストを開始しました。頑張りましょう！');
+        showToast(`${grade}年生の漢字テストを開始しました。送り仮名も含めて解答してください！`);
     }
 
     function loadQuizQuestion(index) {
@@ -793,26 +703,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentQuizIndex = index;
         const q = quizQuestions[index];
+        const answerLength = q.answer.length; // e.g. 2, 3, or 4
 
-        // Format furigana tags in problem statement beautifully
+        // Set question text
         qnumBadge.textContent = `第 ${index + 1} 問`;
-        
         let formattedText = escapeHTML(q.text);
         formattedText = formattedText.replace(/\[([^\]]+)\]/g, '<span class="furigana-target">$1</span>');
         qtextCard.innerHTML = formattedText;
 
         // Reset inputs
-        quizAnswers = ['', '', ''];
+        quizAnswers = ['', '', '', ''];
         answerSlots.forEach(slot => {
             slot.textContent = '';
             slot.classList.remove('filled');
         });
         submitAnswerBtn.disabled = true;
 
-        // Clear quiz canvases
+        // Clear all canvases
         quizCanvas1.clearCanvas();
         quizCanvas2.clearCanvas();
         quizCanvas3.clearCanvas();
+        quizCanvas4.clearCanvas();
+
+        // Show only the needed canvas boxes and answer slots
+        const canvases = [quizCanvas1, quizCanvas2, quizCanvas3, quizCanvas4];
+        for (let i = 0; i < 4; i++) {
+            if (i < answerLength) {
+                canvasBoxes[i].classList.remove('hidden');
+                answerSlots[i].classList.remove('hidden');
+                // Initialize canvas dimensions if displayed
+                setTimeout(() => {
+                    canvases[i].initCanvas();
+                }, 50);
+            } else {
+                canvasBoxes[i].classList.add('hidden');
+                answerSlots[i].classList.add('hidden');
+            }
+        }
+
+        activeCanvas = quizCanvas1;
 
         // Update progress bar
         quizProgressText.textContent = `${index + 1} / ${quizQuestions.length}`;
@@ -832,20 +761,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isQuizActive) return;
 
         const q = quizQuestions[currentQuizIndex];
+        const answerLength = q.answer.length;
         
-        // Evaluate background recognition results:
-        // Check if the expected Kanji is present anywhere inside the Google suggestions lists.
-        const correct1 = quizCanvas1.candidates && quizCanvas1.candidates.includes(q.answer[0]);
-        const correct2 = quizCanvas2.candidates && quizCanvas2.candidates.includes(q.answer[1]);
-        const correct3 = quizCanvas3.candidates && quizCanvas3.candidates.includes(q.answer[2]);
-        const isCorrect = correct1 && correct2 && correct3;
+        // Evaluate each character
+        let isCorrect = true;
+        const canvases = [quizCanvas1, quizCanvas2, quizCanvas3, quizCanvas4];
+        
+        for (let i = 0; i < answerLength; i++) {
+            const correct = canvases[i].candidates && canvases[i].candidates.includes(q.answer[i]);
+            if (!correct) {
+                isCorrect = false;
+            }
+            // Instantly fill in the slots with target characters for review
+            answerSlots[i].textContent = q.answer[i];
+        }
 
         submitAnswerBtn.disabled = true;
-
-        // Swap out visual "writing" stroke icons with the target actual Kanji answers instantly for review
-        answerSlots[0].textContent = q.answer[0];
-        answerSlots[1].textContent = q.answer[1];
-        answerSlots[2].textContent = q.answer[2];
 
         if (isCorrect) {
             quizScore++;
@@ -888,7 +819,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const accuracy = Math.round((quizScore / quizQuestions.length) * 100);
         quizScoreText.textContent = `${accuracy}% (${quizScore}/${quizQuestions.length})`;
 
-        // Render premium result inside question area
+        // Render result inside question area
         qnumBadge.textContent = '結果発表';
         
         let message = '';
@@ -910,7 +841,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="font-size: 1.25rem; font-weight: 600; color: var(--text-primary);">${message}</div>
         `;
 
-        // Clear slots and show "終了"
+        // Clear slots and show "-"
         answerSlots.forEach(slot => {
             slot.textContent = '-';
             slot.classList.remove('filled');
@@ -920,7 +851,7 @@ document.addEventListener('DOMContentLoaded', () => {
         submitAnswerBtn.disabled = false;
         submitAnswerBtn.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
-            <span>テストを終了する</span>
+            <span>トップに戻る</span>
         `;
 
         // Remove listener and attach exit function for the button
@@ -941,19 +872,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function stopQuiz() {
         isQuizActive = false;
-        quizRunningPanel.classList.add('hidden');
-        quizManagePanel.classList.remove('hidden');
+        quizView.classList.add('hidden');
+        gradeSelectionView.classList.remove('hidden');
 
         qnumBadge.textContent = '第 1 問';
-        qtextCard.textContent = '問題が読み込まれていません。「テストを開始」を押してください。';
+        qtextCard.textContent = '問題が読み込まれていません。';
         
         answerSlots.forEach(slot => {
             slot.textContent = '';
             slot.classList.remove('filled');
+            slot.classList.remove('hidden');
+        });
+        
+        canvasBoxes.forEach(box => {
+            box.classList.remove('hidden');
         });
         
         submitAnswerBtn.disabled = true;
-        updateQuizSettingsUI();
     }
 
     // Helper for HTML escaping
@@ -983,279 +918,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Event connections
-    startQuizBtn.addEventListener('click', startQuiz);
     stopQuizBtn.addEventListener('click', stopQuiz);
-    addQuestionBtn.addEventListener('click', addQuestion);
     submitAnswerBtn.addEventListener('click', checkQuizAnswer);
 
-    // Initial load
-    initQuizData();
-
 
     // ==========================================
-    // ===       EDITOR FUNCTIONS (ORIGINAL)  ===
+    // ===       HELP MODAL LOGIC            ===
     // ==========================================
-
-    function insertText(text) {
-        const start = editor.selectionStart;
-        const end = editor.selectionEnd;
-        const currentVal = editor.value;
-        
-        editor.value = currentVal.substring(0, start) + text + currentVal.substring(end);
-        
-        // Reposition cursor right after inserted text
-        const cursorPosition = start + text.length;
-        editor.setSelectionRange(cursorPosition, cursorPosition);
-        editor.focus();
-        
-        updateCharCount();
-    }
-
-    function updateCharCount() {
-        const text = editor.value;
-        charCounter.textContent = `${text.length} 文字`;
-    }
-
-    editor.addEventListener('input', updateCharCount);
-
-    // Control Buttons
-    spaceBtn.addEventListener('click', () => {
-        insertText(' ');
-    });
-
-    backspaceBtn.addEventListener('click', () => {
-        const start = editor.selectionStart;
-        const end = editor.selectionEnd;
-        const currentVal = editor.value;
-        
-        if (start === end) {
-            if (start > 0) {
-                // Delete one char before the cursor
-                editor.value = currentVal.substring(0, start - 1) + currentVal.substring(start);
-                editor.setSelectionRange(start - 1, start - 1);
-            }
-        } else {
-            // Delete highlighted range
-            editor.value = currentVal.substring(0, start) + currentVal.substring(end);
-            editor.setSelectionRange(start, start);
-        }
-        
-        editor.focus();
-        updateCharCount();
-    });
-
-    clearTextBtn.addEventListener('click', () => {
-        if (editor.value.length === 0) return;
-        
-        if (confirm('テキストエディタの文章をすべて消去しますか？')) {
-            editor.value = '';
-            updateCharCount();
-            editor.focus();
-            showToast('テキストを消去しました。');
-        }
-    });
-
-    // --- Web Speech API (Text to Speech) ---
-    speakBtn.addEventListener('click', () => {
-        const text = editor.value;
-        if (!text) {
-            showToast('読み上げるテキストを入力してください。', 'danger');
-            return;
-        }
-        
-        if ('speechSynthesis' in window) {
-            // Cancel any current speaking
-            window.speechSynthesis.cancel();
-            
-            const utterance = new SpeechSynthesisUtterance(text);
-            
-            // Set Japanese speech voice language
-            utterance.lang = 'ja-JP';
-            utterance.rate = 1.0;
-            utterance.pitch = 1.0;
-            
-            // Button feedback loading state
-            speakBtn.classList.add('secondary');
-            
-            utterance.onend = () => {
-                speakBtn.classList.remove('secondary');
-            };
-            
-            utterance.onerror = (e) => {
-                speakBtn.classList.remove('secondary');
-                console.error('Speech error:', e);
-                showToast('音声の読み上げ中にエラーが発生しました。', 'danger');
-            };
-            
-            window.speechSynthesis.speak(utterance);
-        } else {
-            showToast('お使いのブラウザは音声合成に対応していません。', 'danger');
-        }
-    });
-
-    // --- Copy to Clipboard ---
-    copyBtn.addEventListener('click', async () => {
-        const text = editor.value;
-        if (!text) {
-            showToast('コピーするテキストがありません。', 'danger');
-            return;
-        }
-        
-        try {
-            await navigator.clipboard.writeText(text);
-            showToast('クリップボードにコピーしました！', 'success');
-        } catch (err) {
-            console.error('Failed to copy:', err);
-            // Fallback for older browsers
-            editor.select();
-            document.execCommand('copy');
-            showToast('クリップボードにコピーしました！ (Fallback)', 'success');
-        }
-    });
-
-    // --- Toast Notification System ---
-    function showToast(message, type = 'success') {
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        
-        // Icon based on type
-        let icon = '';
-        if (type === 'success') {
-            icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
-        } else if (type === 'danger') {
-            icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>';
-        }
-        
-        toast.innerHTML = `${icon}<span>${message}</span>`;
-        toastContainer.appendChild(toast);
-        
-        // Remove after 3 seconds
-        setTimeout(() => {
-            toast.classList.add('fade-out');
-            toast.addEventListener('transitionend', () => {
-                toast.remove();
-            });
-        }, 3000);
-    }
-
-    // --- History System (LocalStorage) ---
-    const HISTORY_KEY = 'tegaki_studio_history';
     
-    function loadHistory() {
-        const historyData = localStorage.getItem(HISTORY_KEY);
-        const history = historyData ? JSON.parse(historyData) : [];
-        renderHistoryList(history);
-    }
-
-    function saveToHistory() {
-        const text = editor.value.trim();
-        if (!text) {
-            showToast('保存するテキストが空です。', 'danger');
-            return;
-        }
-        
-        const historyData = localStorage.getItem(HISTORY_KEY);
-        const history = historyData ? JSON.parse(historyData) : [];
-        
-        // Prevent duplicate consecutive items
-        if (history.length > 0 && history[0].text === text) {
-            showToast('すでに同じ文章が直近に保存されています。');
-            return;
-        }
-        
-        // Prepend new entry
-        history.unshift({
-            id: Date.now(),
-            text: text,
-            date: new Date().toLocaleDateString('ja-JP', { hour: '2-digit', minute: '2-digit' })
-        });
-        
-        // Limit to 5 entries
-        if (history.length > 5) {
-            history.pop();
-        }
-        
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-        renderHistoryList(history);
-        showToast('履歴に保存しました！', 'success');
-    }
-
-    function deleteHistoryItem(id) {
-        const historyData = localStorage.getItem(HISTORY_KEY);
-        if (!historyData) return;
-        
-        let history = JSON.parse(historyData);
-        history = history.filter(item => item.id !== id);
-        
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-        renderHistoryList(history);
-        showToast('履歴を削除しました。');
-    }
-
-    function renderHistoryList(history) {
-        historyItemsContainer.innerHTML = '';
-        
-        if (history.length === 0) {
-            historyItemsContainer.innerHTML = '<span class="no-history-text">保存された履歴はありません</span>';
-            return;
-        }
-        
-        history.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'history-item';
-            
-            const textSpan = document.createElement('span');
-            textSpan.className = 'history-text';
-            textSpan.textContent = item.text;
-            textSpan.title = 'エディタに復元する';
-            textSpan.addEventListener('click', () => {
-                editor.value = item.text;
-                updateCharCount();
-                editor.focus();
-                showToast('テキストを復元しました。');
-            });
-            
-            const actionDiv = document.createElement('div');
-            actionDiv.className = 'history-item-actions';
-            
-            // Speak history item
-            const speakHistoryBtn = document.createElement('button');
-            speakHistoryBtn.className = 'history-item-btn';
-            speakHistoryBtn.title = 'このテキストを読み上げる';
-            speakHistoryBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>';
-            speakHistoryBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(item.text);
-                    window.speechSynthesis.speak(utterance);
-                }
-            });
-
-            // Delete item
-            const delBtn = document.createElement('button');
-            delBtn.className = 'history-item-btn delete-btn';
-            delBtn.title = '履歴から削除';
-            delBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>';
-            delBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                deleteHistoryItem(item.id);
-            });
-            
-            actionDiv.appendChild(speakHistoryBtn);
-            actionDiv.appendChild(delBtn);
-            
-            div.appendChild(textSpan);
-            div.appendChild(actionDiv);
-            
-            historyItemsContainer.appendChild(div);
-        });
-    }
-
-    saveHistoryBtn.addEventListener('click', saveToHistory);
-    loadHistory(); // Load initially
-
-    // --- Help Modal Logic ---
     function toggleHelpModal() {
         helpModal.classList.toggle('hidden');
     }
@@ -1293,12 +963,11 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('ダークモードに切り替えました。');
         }
         
-        // Notify all 5 canvas instances of the theme change
-        canvas1.setTheme(activeTheme);
-        canvas2.setTheme(activeTheme);
+        // Notify all 4 quiz canvas instances of the theme change
         quizCanvas1.setTheme(activeTheme);
         quizCanvas2.setTheme(activeTheme);
         quizCanvas3.setTheme(activeTheme);
+        quizCanvas4.setTheme(activeTheme);
     }
 
     themeToggleBtn.addEventListener('click', toggleTheme);
@@ -1309,10 +978,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.remove('dark-theme');
         document.body.classList.add('light-theme');
         activeTheme = 'light';
-        canvas1.setTheme(activeTheme);
-        canvas2.setTheme(activeTheme);
         quizCanvas1.setTheme(activeTheme);
         quizCanvas2.setTheme(activeTheme);
         quizCanvas3.setTheme(activeTheme);
+        quizCanvas4.setTheme(activeTheme);
     }
 });
