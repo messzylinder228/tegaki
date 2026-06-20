@@ -351,7 +351,7 @@ body.light-theme .moon-icon { display: block; }
     box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.1), var(--box-shadow-sm) inset;
 }
 
-#drawing-canvas {
+.canvas-wrapper canvas {
     position: absolute;
     top: 0;
     left: 0;
@@ -1010,7 +1010,77 @@ body.light-theme .toast {
     }
     
     .canvas-wrapper {
-        min-height: 340px;
+        min-height: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Move the text editor card to the top on mobile so users can see what they write */
+    #editor-view {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    #editor-view .editor-section {
+        order: -1; /* Display text editor at the top */
+    }
+    
+    #composition-text {
+        min-height: 120px; /* Make text editor area more compact on mobile */
+    }
+    
+    .canvas-wrapper {
+        min-height: 180px; /* Make canvases much more compact on mobile */
+    }
+
+    /* Keep canvas toolbars compact */
+    .canvas-toolbar {
+        bottom: 8px;
+        padding: 4px 8px;
+        gap: 4px;
+    }
+    
+    .tool-btn {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .tool-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .canvas-toolbar .divider {
+        height: 14px;
+    }
+    
+    /* Make candidate boxes more compact */
+    .candidates-container {
+        padding: 8px 12px;
+        min-height: 52px;
+        gap: 8px;
+    }
+    
+    .candidate-item {
+        padding: 4px 10px;
+        font-size: 1.1rem;
+    }
+    
+    /* Hide pen size selector in mobile quiz view to save space */
+    .quiz-canvases-grid .canvas-toolbar .divider,
+    .quiz-canvases-grid .dropdown-trigger {
+        display: none !important;
+    }
+    
+    .quiz-canvases-grid .canvas-toolbar {
+        bottom: 6px;
+        padding: 2px 4px;
+        gap: 2px;
+    }
+    
+    .quiz-canvases-grid .tool-btn {
+        width: 24px;
+        height: 24px;
     }
 }
 
@@ -1033,6 +1103,13 @@ body.light-theme .toast {
     
     .card {
         padding: 16px;
+        gap: 12px;
+    }
+    
+    .tab-btn {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        gap: 6px;
     }
     
     .editor-actions {
@@ -1044,6 +1121,48 @@ body.light-theme .toast {
         justify-content: center;
         padding: 8px 12px;
         font-size: 0.8rem;
+    }
+
+    .answer-slot {
+        width: 45px;
+        height: 45px;
+        font-size: 1.5rem;
+    }
+    
+    .quiz-answer-area {
+        padding: 12px;
+        justify-content: center;
+        gap: 12px;
+    }
+    
+    .large-action-btn {
+        width: 100%;
+        padding: 12px;
+        font-size: 0.95rem !important;
+        justify-content: center;
+    }
+
+    .canvas-box-header {
+        font-size: 0.8rem;
+    }
+    
+    .canvas-label {
+        font-size: 0.8rem;
+    }
+    
+    .mode-badge {
+        padding: 2px 6px;
+        font-size: 0.7rem;
+    }
+    
+    .modal-card {
+        max-height: 95vh;
+        border-radius: var(--border-radius-md);
+    }
+    
+    .modal-body {
+        padding: 16px;
+        gap: 16px;
     }
 }
 
@@ -1076,7 +1195,7 @@ body.light-theme .toast {
 }
 
 /* Responsive adjustment for canvases */
-@media (max-width: 1200px) {
+@media (max-width: 480px) {
     .canvases-grid {
         grid-template-columns: 1fr;
         min-height: auto;
@@ -1135,7 +1254,7 @@ body.light-theme .tab-btn:hover {
     min-height: 340px;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 340px) {
     .quiz-canvases-grid {
         grid-template-columns: 1fr;
     }
